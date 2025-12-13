@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include "rebound.h"
+#include "mockCollision.h"
 #include "assert.h"
 
 // This example is using a custom velocity dependend coefficient of restitution
@@ -29,14 +30,14 @@ void heartbeat(struct reb_simulation* const r){
     }
 }
 
-struct reb_simulation* mockShearingSheetSimulation(){
+struct reb_simulation* mockShearingSheetSimulation(int collision){
     struct reb_simulation* r = reb_simulation_create();
     // Setup constants
     r->opening_angle2    = .5;                  // This determines the precission of the tree code gravity calculation.
     r->integrator        = REB_INTEGRATOR_SEI;
     r->boundary          = REB_BOUNDARY_SHEAR;
     r->gravity           = REB_GRAVITY_TREE;
-    r->collision         = REB_COLLISION_TREE;
+    r->collision         = collision;
     r->collision_resolve = reb_collision_resolve_hardsphere;
     double OMEGA         = 0.00013143527;       // 1/s
     r->ri_sei.OMEGA      = OMEGA;
@@ -120,16 +121,25 @@ struct reb_simulation* mockBouncingBallsSimulation(){
     return r;
 }
 
-void runSimulation(struct reb_simulation* r, double time){
+void test_Simulation(struct reb_simulation* r, double time){
     reb_simulation_integrate(r, time);
     assert(r->collisions_N == 110);
-    printf("\n\n%d\n", r->collisions_N);
+    // printf("\n\n%d\n", r->collisions_N);
+}
+
+void test_CollisionSearch(struct reb_simulation* r){
+    mock_reb_collision_search(r);
+    // assert(r->collisions_N == 110);
+    printf("\n%d\n", r->collisions_N);
 }
 
 
 int main(int argc, char* argv[]){
-    struct reb_simulation* r = mockShearingSheetSimulation();
+
+    //Choose collision method (Case section in collision.c)
+    struct reb_simulation* r = mockShearingSheetSimulation(REB_COLLISION_TREE);
     //reb_simulation_start_server(r, 1234);
-    runSimulation(r, 10);
+    test_Simulation(r, 10);
+    test_CollisionSearch(r);
     reb_simulation_free(r);
 }

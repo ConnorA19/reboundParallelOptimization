@@ -5,9 +5,10 @@ include ../../src/Makefile.defs
 # CCPROBLEM is defined in Makefile.defs to allow for
 # a compact cross platform Makefile
 .PHONY: all librebound
-all: problem.c librebound
+all: problem.c mockCollision.c librebound
 	@echo "Compiling $< ..."
-	$(CCPROBLEM)
+	cc -I../../src/ -Wl,-rpath,./ -std=c99 -Wpointer-arith -D_GNU_SOURCE -O3 -fPIC -Wall -g  -fopenmp -DSERVER -DOPENMP -DGITHASH=5908fd4e4ac581720b6a230639f6766216197c43 problem.c mockCollision.c -L. -lrebound -lm -lrt -fopenmp -o rebound
+
 	@echo ""
 	@echo "Compilation successful. To run REBOUND, execute the file '$(EXEREBOUND)'."
 	@echo ""
