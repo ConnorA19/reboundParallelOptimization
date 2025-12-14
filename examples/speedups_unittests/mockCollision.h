@@ -27,6 +27,6 @@
 /**
  * @brief Search for collisions and resolve them.
  */
-void mock_reb_collision_search(struct reb_simulation* const r);
+double mock_reb_collision_search(struct reb_simulation* const r);
 
 #endif // _COLLISIONS_H

@@ -47,7 +47,8 @@
 static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r,  double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c);
 static void reb_tree_check_for_overlapping_trajectories_in_cell(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double p1_r_plus_dtv, struct reb_collision* collision_nearest, struct reb_treecell* c, double maxdrift);
 
-void mock_reb_collision_search(struct reb_simulation* const r){
+double mock_reb_collision_search(struct reb_simulation* const r){
+    double total_time = 0;
     r->collisions_N = 0;
     int N = r->N - r->N_var;
     int Ninner = N;
@@ -308,7 +309,7 @@ void mock_reb_collision_search(struct reb_simulation* const r){
                     if (collision_nearest.p2==-1) continue;
                 }
                 double t1 = omp_get_wtime();
-                printf("\n Time: %f\n", (t1 - t0));
+                total_time = t1 - t0;
             }
             break;
         case REB_COLLISION_LINETREE:
@@ -498,6 +499,7 @@ void mock_reb_collision_search(struct reb_simulation* const r){
             }
         }
     }
+    return total_time;
 }
 
 /**
