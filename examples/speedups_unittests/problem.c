@@ -159,19 +159,25 @@ void test_CollisionSearchCompare(int particleCount){
 }
 
 
-void time_CollisionSearchOriginal(struct reb_simulation* r){
+void time_CollisionSearchOriginal(){
     double total_time = 0.0;
-    for (int i = 0; i < 500000; i++){
+    struct reb_simulation* r;
+    for (int i = 0; i < 50000; i++){
+        r = mockShearingSheetSimulation(REB_COLLISION_TREE, i % 200);
         total_time += mock_reb_collision_search(r);
+        reb_simulation_free(r);
     }
     // assert(r->collisions_N == 110);
     printf("\nTotal Time: %f\n", total_time);
 }
 
-void time_CollisionSearchSpeedup(struct reb_simulation* r){
+void time_CollisionSearchSpeedup(){
     double total_time = 0.0;
-    for (int i = 0; i < 500000; i++){
+    struct reb_simulation* r;
+    for (int i = 0; i < 50000; i++){
+        r = mockShearingSheetSimulation(REB_COLLISION_TREE, i % 200);
         total_time += speedup_reb_collision_search(r);
+        reb_simulation_free(r);
     }
     // assert(r->collisions_N == 110);
     printf("\nTotal Time: %f\n", total_time);
@@ -183,6 +189,8 @@ int main(int argc, char* argv[]){
     //mockShearingSheetSimulation(Collision type (Keep REB_COLLISION_TREE, numParticles))
     //reb_simulation_start_server();
     // mock_tree_collisions();
+
+    //TEST
     test_CollisionSearchCompare(-1);
     test_CollisionSearchCompare(0);
     test_CollisionSearchCompare(1);
@@ -190,6 +198,12 @@ int main(int argc, char* argv[]){
     test_CollisionSearchCompare(10);
     test_CollisionSearchCompare(100);
     test_CollisionSearchCompare(1000);
+    //WANT TO ADD END TO END TEST HERE WITH OUTPUT TO BIN
+
+    //TIME
+    time_CollisionSearchSpeedup();
+
+
     //test_Simulation(r, 10);
 
     // struct reb_simulation* r = mockShearingSheetSimulation(REB_COLLISION_TREE, 8);
