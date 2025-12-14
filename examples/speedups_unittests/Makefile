@@ -7,24 +7,24 @@ include ../../src/Makefile.defs
 .PHONY: all librebound
 all: problem.c mockCollision.c librebound
 	@echo "Compiling $< ..."
-	cc -I../../src/ -Wl,-rpath,./ -std=c99 -Wpointer-arith -D_GNU_SOURCE -O3 -fPIC -Wall -g  -fopenmp -DSERVER -DOPENMP -DGITHASH=16cd699dc0bc3aa32c879d3ae155a250ea279085 problem.c mockCollision.c -L. -lrebound -lm -lrt -fopenmp -o rebound
+	cc -I../../src/ -Wl,-rpath,./ -std=c99 -Wpointer-arith -D_GNU_SOURCE -O3 -fPIC -Wall -g  -fopenmp -DSERVER -DOPENMP -DGITHASH=16cd699dc0bc3aa32c879d3ae155a250ea279085 problem.c mockCollision.c speedupCollisionAttempts.c -L. -lrebound -lm -lrt -fopenmp -o rebound
 	@echo ""
 	@echo "Compilation successful. To run REBOUND, execute the file '$(EXEREBOUND)'."
 	@echo ""
 
 test: problem.c mockCollision.c librebound
 	@echo "Compiling $< ..."
-	cc -I../../src/ -Wl,-rpath,./ -std=c99 -Wpointer-arith -D_GNU_SOURCE -O3 -fPIC -Wall -g  -fopenmp -DSERVER -DOPENMP -DGITHASH=16cd699dc0bc3aa32c879d3ae155a250ea279085 problem.c mockCollision.c -L. -lrebound -lm -lrt -fopenmp -o rebound
-	echo""
+	cc -I../../src/ -Wl,-rpath,./ -std=c99 -Wpointer-arith -D_GNU_SOURCE -O3 -fPIC -Wall -g  -fopenmp -DSERVER -DOPENMP -DGITHASH=16cd699dc0bc3aa32c879d3ae155a250ea279085 problem.c mockCollision.c speedupCollisionAttempts.c -L. -lrebound -lm -lrt -fopenmp -o rebound
+	echo " "
 	echo "1 Thread"
 	OMP_NUM_THREADS=1 ./rebound
-	echo""
+	echo " "
 	echo "2 Threads"
 	OMP_NUM_THREADS=2 ./rebound
-	echo""
+	echo " "
 	echo "4 Threads"
 	OMP_NUM_THREADS=4 ./rebound
-	echo""
+	echo " "
 	echo "8 Threads"
 	OMP_NUM_THREADS=8 ./rebound
 

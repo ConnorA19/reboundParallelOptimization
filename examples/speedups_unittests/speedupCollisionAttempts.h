@@ -22,11 +22,11 @@
  * along with rebound.  If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#ifndef _MOCK_COLLISIONS_H
-#define _MOCK_COLLISIONS_H
+#ifndef _SPEEDUP_COLLISIONS_H
+#define _SPEEDUP_COLLISIONS_H
 /**
  * @brief Search for collisions and resolve them.
  */
-double mock_reb_collision_search(struct reb_simulation* const r);
+double speedup_reb_collision_search(struct reb_simulation* const r);
 
-#endif // _MOCK_COLLISIONS_H
+#endif // _SPEEDUP_COLLISIONS_H

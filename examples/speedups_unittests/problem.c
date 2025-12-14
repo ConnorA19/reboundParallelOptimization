@@ -11,76 +11,10 @@
 #include "rebound.h"
 #include "boundary.h"
 #include "mockCollision.h"
+#include "speedupCollisionAttempts.h"
 #include "tree.h"
 #include "integrator_trace.h"
 #include "assert.h"
-
-static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c){
-    const struct reb_particle* const particles = r->particles;
-    if (c->pt>=0){
-        // c is a leaf node
-        int condition     = 1;
-        if (condition){
-            struct reb_particle p2;
-            #ifdef MPI
-            if (isloc==1){
-                #endif // MPI
-                p2 = particles[c->pt];
-                #ifdef MPI
-            }else{
-                int N_root_per_node = r->N_root/r->mpi_num;
-                int proc_id = ri/N_root_per_node;
-                p2 = r->particles_recv[proc_id][c->pt];
-            }
-            #endif // MPI
-
-            double dx = gb.x - p2.x;
-            double dy = gb.y - p2.y;
-            double dz = gb.z - p2.z;
-            double r2 = dx*dx+dy*dy+dz*dz;
-            // A closer neighbour has already been found
-            double rp = p1_r+p2.r;
-            // reb_particles are not overlapping
-            if (r2 > rp*rp) return;
-            double dvx = gb.vx - p2.vx;
-            double dvy = gb.vy - p2.vy;
-            double dvz = gb.vz - p2.vz;
-            // reb_particles are not approaching each other
-            if (dvx*dx + dvy*dy + dvz*dz >0) return;
-            // Found a new nearest neighbour. Save it for later.
-            collision_nearest->ri = ri;
-            collision_nearest->p2 = c->pt;
-            collision_nearest->gb = gbunmod;
-            // Save collision in collisions array.
-            #pragma omp critical
-            {
-                if (r->N_allocated_collisions<=r->collisions_N){
-                    // Init to 32 if no space has been allocated yet, otherwise double it.
-                    r->N_allocated_collisions = r->N_allocated_collisions ? r->N_allocated_collisions * 2 : 32;
-                    r->collisions = realloc(r->collisions,sizeof(struct reb_collision)*r->N_allocated_collisions);
-                }
-                r->collisions[r->collisions_N] = *collision_nearest;
-                r->collisions_N++;
-            }
-        }
-    }else{
-        // c is not a leaf node
-        double dx = gb.x - c->x;
-        double dy = gb.y - c->y;
-        double dz = gb.z - c->z;
-        double r2 = dx*dx + dy*dy + dz*dz;
-        double rp  = p1_r + second_largest_radius + 0.86602540378443*c->w;
-        // Check if we need to decent into daughter cells
-        if (r2 < rp*rp ){
-            for (int o=0;o<8;o++){
-                struct reb_treecell* d = c->oct[o];
-                if (d!=NULL){
-                    reb_tree_get_nearest_neighbour_in_cell(r, gb,gbunmod,ri,p1_r,second_largest_radius,collision_nearest,d);
-                }
-            }
-        }
-    }
-}
 
 // This example is using a custom velocity dependend coefficient of restitution
 double coefficient_of_restitution_bridges(const struct reb_simulation* const r, double v){
@@ -193,83 +127,39 @@ struct reb_simulation* mockBouncingBallsSimulation(){
     return r;
 }
 
-double mock_tree_collisions(struct reb_simulation* r){
-    r->collisions_N = 0;
-    // Update and simplify tree.
-    // Prepare particles for distribution to other nodes.
-    reb_simulation_update_tree(r);
 
-    // Loop over ghost boxes, but only the inner most ring.
-    int N_ghost_xcol = (r->N_ghost_x>1?1:r->N_ghost_x);
-    int N_ghost_ycol = (r->N_ghost_y>1?1:r->N_ghost_y);
-    int N_ghost_zcol = (r->N_ghost_z>1?1:r->N_ghost_z);
-    const struct reb_particle* const particles = r->particles;
-    const int N = r->N - r->N_var;
-    // Find second largest radius
-    int l1 = -1;
-    int l2 = -1;
-    reb_simulation_two_largest_particles(r, &l1, &l2);
-    double second_largest_radius = 0;
-    if (l2 != -1){
-        second_largest_radius = r->particles[l2].r;
-    }
+//Tests  ---------------------------------
 
-    //---------------------------------------------TIME HERE---------------------------
-    double t0 = omp_get_wtime();
-    // Loop over all particles
-    #pragma omp parallel for schedule(guided)
-    for (int i=0;i<N;i++){
-        #ifndef OPENMP
-        if (reb_sigint > 1) return;
-        #endif // OPENMP
-        struct reb_particle p1 = particles[i];
-        struct reb_collision collision_nearest;
-        collision_nearest.p1 = i;
-        collision_nearest.p2 = -1;
-        double p1_r = p1.r;
-        // Loop over ghost boxes.
-        for (int gbx=-N_ghost_xcol; gbx<=N_ghost_xcol; gbx++){
-            for (int gby=-N_ghost_ycol; gby<=N_ghost_ycol; gby++){
-                for (int gbz=-N_ghost_zcol; gbz<=N_ghost_zcol; gbz++){
-                    // Calculated shifted position (for speedup).
-                    struct reb_vec6d gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
-                    struct reb_vec6d gbunmod = gb;
-                    gb.x += p1.x;
-                    gb.y += p1.y;
-                    gb.z += p1.z;
-                    gb.vx += p1.vx;
-                    gb.vy += p1.vy;
-                    gb.vz += p1.vz;
-                    // Loop over all root boxes.
-                    for (int ri=0;ri<r->N_root;ri++){
-                        struct reb_treecell* rootcell = r->tree_root[ri];
-                        if (rootcell!=NULL){
-                            reb_tree_get_nearest_neighbour_in_cell(r, gb, gbunmod, ri, p1_r, second_largest_radius, &collision_nearest, rootcell);
-                        }
-                    }
-                }
-            }
-        }
-        // Continue if no collision was found
-        if (collision_nearest.p2==-1) continue;
-    }
-    double t1 = omp_get_wtime();
-    return t1 - t0;
-}
 
-void test_Simulation(struct reb_simulation* r, double time){
-    reb_simulation_integrate(r, time);
+void test_Simulation(){
+    struct reb_simulation* r = mockShearingSheetSimulation(REB_COLLISION_TREE, 2);
+    reb_simulation_integrate(r, 10);
     assert(r->collisions_N == 110);
     // printf("\n\n%d\n", r->collisions_N);
 }
 
-void test_CollisionSearch(struct reb_simulation* r){
-    mock_tree_collisions(r);
-    //assert(r->collisions_N == 139);
+void test_CollisionSearchOriginal(){
+    struct reb_simulation* r = mockShearingSheetSimulation(REB_COLLISION_TREE, 8);
+    mock_reb_collision_search(r);
+    // assert(r->collisions_N == 34);
     printf("\n\n%d\n", r->collisions_N);
 }
 
-void time_FullCollisionSearch(struct reb_simulation* r){
+
+void test_CollisionSearchCompare(int particleCount){
+    struct reb_simulation* r = mockShearingSheetSimulation(REB_COLLISION_TREE, particleCount);
+    mock_reb_collision_search(r);
+    int collisions_original = r->collisions_N;
+    reb_simulation_free(r);
+    r = mockShearingSheetSimulation(REB_COLLISION_TREE, particleCount);
+    speedup_reb_collision_search(r);
+    int collisions_new = r->collisions_N;
+    assert(collisions_original == collisions_new);
+    reb_simulation_free(r);
+}
+
+
+void time_CollisionSearchOriginal(struct reb_simulation* r){
     double total_time = 0.0;
     for (int i = 0; i < 500000; i++){
         total_time += mock_reb_collision_search(r);
@@ -278,17 +168,33 @@ void time_FullCollisionSearch(struct reb_simulation* r){
     printf("\nTotal Time: %f\n", total_time);
 }
 
+void time_CollisionSearchSpeedup(struct reb_simulation* r){
+    double total_time = 0.0;
+    for (int i = 0; i < 500000; i++){
+        total_time += speedup_reb_collision_search(r);
+    }
+    // assert(r->collisions_N == 110);
+    printf("\nTotal Time: %f\n", total_time);
+}
 
 int main(int argc, char* argv[]){
 
     //Choose collision method (Case section in collision.c)
     //mockShearingSheetSimulation(Collision type (Keep REB_COLLISION_TREE, numParticles))
-    struct reb_simulation* r = mockShearingSheetSimulation(REB_COLLISION_TREE, 2);
-    //reb_simulation_start_server(r, 1234);
-    mock_tree_collisions(r);
-    test_CollisionSearch(r);
+    //reb_simulation_start_server();
+    // mock_tree_collisions();
+    test_CollisionSearchCompare(-1);
+    test_CollisionSearchCompare(0);
+    test_CollisionSearchCompare(1);
+    test_CollisionSearchCompare(2);
+    test_CollisionSearchCompare(10);
+    test_CollisionSearchCompare(100);
+    test_CollisionSearchCompare(1000);
     //test_Simulation(r, 10);
 
-    //time_CollisionSearch(r);
-    reb_simulation_free(r);
+    // struct reb_simulation* r = mockShearingSheetSimulation(REB_COLLISION_TREE, 8);
+    // time_FullCollisionSearchOriginal(r);
+    //time_CollisionSearchOriginal(r);
+    // reb_simulation_free(r);
+
 }
