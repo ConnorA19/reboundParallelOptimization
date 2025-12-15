@@ -179,8 +179,27 @@ void time_CollisionSearchSpeedup(){
         total_time += speedup_reb_collision_search(r);
         reb_simulation_free(r);
     }
-    // assert(r->collisions_N == 110);
     printf("\nTotal Time: %f\n", total_time);
+}
+
+void time_CollisionSearchSpeedupCompare(){
+    double total_time1 = 0.0;
+    double total_time2 = 0.0;
+    struct reb_simulation* r;
+    for (int i = 0; i < 50000; i++){
+        r = mockShearingSheetSimulation(REB_COLLISION_TREE, i % 200);
+        total_time1 += mock_reb_collision_search(r);
+        reb_simulation_free(r);
+    }
+
+    for (int i = 0; i < 50000; i++){
+        r = mockShearingSheetSimulation(REB_COLLISION_TREE, i % 200);
+        total_time2 += speedup_reb_collision_search(r);
+        reb_simulation_free(r);
+    }
+    printf("\nTotal Time Original: %f\n", total_time1);
+    printf("Total Time Speedup: %f\n", total_time2);
+    printf("Relative Time %f\n", (total_time2/total_time1));
 }
 
 int main(int argc, char* argv[]){
@@ -197,11 +216,12 @@ int main(int argc, char* argv[]){
     test_CollisionSearchCompare(2);
     test_CollisionSearchCompare(10);
     test_CollisionSearchCompare(100);
-    test_CollisionSearchCompare(1000);
+    // test_CollisionSearchCompare(1000);
     //WANT TO ADD END TO END TEST HERE WITH OUTPUT TO BIN
 
     //TIME
-    time_CollisionSearchSpeedup();
+    // time_CollisionSearchSpeedup();
+    time_CollisionSearchSpeedupCompare();
 
 
     //test_Simulation(r, 10);

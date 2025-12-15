@@ -644,7 +644,7 @@ void reb_simulation_init(struct reb_simulation* r){
     r->N_tree_essential_recv_max = 0;          
 #endif // MPI
 #ifdef OPENMP
-    printf("Using OpenMP with %d threads per node.\n",omp_get_max_threads());
+    //printf("Using OpenMP with %d threads per node.\n",omp_get_max_threads());
 #endif // OPENMP
 }
 
