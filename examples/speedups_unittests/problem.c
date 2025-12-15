@@ -150,13 +150,19 @@ void test_CollisionSearchCompare(int particleCount){
     struct reb_simulation* r = mockShearingSheetSimulation(REB_COLLISION_TREE, particleCount);
     mock_reb_collision_search(r);
     int collisions_original = r->collisions_N;
+    int particle_count_original = r->N;
     reb_simulation_free(r);
     r = mockShearingSheetSimulation(REB_COLLISION_TREE, particleCount);
     speedup_reb_collision_search(r);
     int collisions_new = r->collisions_N;
+    int particle_count_new = r->N;
     assert(collisions_original == collisions_new);
+    assert(particle_count_original == particle_count_new);
+    printf("\n%d\n", collisions_original);
+    printf("\n%d\n", collisions_new);
     reb_simulation_free(r);
 }
+
 
 
 void time_CollisionSearchOriginal(){
