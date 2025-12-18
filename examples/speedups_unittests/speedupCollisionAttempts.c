@@ -308,7 +308,7 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
                 int gby_max = (p1.y > boxsize_y - furthest_collision_distance) ? N_ghost_ycol : 0;
 
                 int gbz_min = (p1.z < furthest_collision_distance) ? -N_ghost_zcol : 0;
-                int gbz_max = (p1.x > boxsize_z - furthest_collision_distance) ? N_ghost_zcol : 0;
+                int gbz_max = (p1.z > boxsize_z - furthest_collision_distance) ? N_ghost_zcol : 0;
                 // Loop over ghost boxes.
                 for (int gbx=gbx_min; gbx<=gbx_max; gbx++){
                     for (int gby=gby_min; gby<=gby_max; gby++){
