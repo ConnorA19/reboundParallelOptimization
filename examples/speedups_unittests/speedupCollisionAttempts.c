@@ -284,7 +284,35 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
             //---------------------------------------------TIME HERE---------------------------
             double t0 = omp_get_wtime();
             // Loop over all particles
-            #pragma omp parallel for schedule(guided)
+    // printf("N: %d, xcol: %d, ycol: %d, zcol: %d \n", N, N_ghost_xcol,
+    //        N_ghost_ycol, N_ghost_zcol);
+    // struct reb_vec6d gbcache[N_ghost_xcol * N_ghost_ycol * N_ghost_zcol];
+    int elements =
+        (2 * N_ghost_xcol + 1) * (2 * N_ghost_ycol + 1) * (2 * N_ghost_zcol + 1);
+    struct reb_vec6d *gbcache = calloc(elements, sizeof(struct reb_vec6d));
+    // malloc(sizeof(struct reb_vec6d) * 2 * N_ghost_xcol * 2 * N_ghost_ycol *
+    //            2 * N_ghost_zcol * 2 +
+    //        3);
+    if (gbcache == NULL) {
+      return 0;
+    }
+    // printf("xyz: %d %d %d elem: %d\n", N_ghost_xcol, N_ghost_ycol,
+    // N_ghost_zcol,
+    //        elements);
+    for (int gbx = 0; gbx <= 2 * N_ghost_xcol; gbx++) {
+      for (int gby = 0; gby <= 2 * N_ghost_ycol; gby++) {
+        for (int gbz = 0; gbz <= 2 * N_ghost_zcol; gbz++) {
+          // gbcache[gbx][gby][gbz] =
+          int index = gbx + gby * (N_ghost_xcol * 2 + 1) +
+                      gbz * (N_ghost_xcol * N_ghost_ycol * 4 + 1);
+          // printf("Wrote: %d at: %d %d %d\n", index, gbx, gby, gbz);
+          gbcache[index] = reb_boundary_get_ghostbox(
+              r, gbx - N_ghost_xcol, gby - N_ghost_ycol, gbz - N_ghost_zcol);
+        }
+      }
+    }
+            // Loop over all particles
+            #pragma omp parallel for schedule(guided) shared(gbcache)
             for (int i=0;i<N;i++){
                 #ifndef OPENMP
                 if (reb_sigint > 1) return;
@@ -314,7 +342,15 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
                     for (int gby=gby_min; gby<=gby_max; gby++){
                         for (int gbz=gbz_min; gbz<=gbz_max; gbz++){
                             // Calculated shifted position (for speedup).
-                            struct reb_vec6d gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
+                            int index =
+                (gbx + N_ghost_xcol) +
+                (gby + N_ghost_ycol) * (N_ghost_xcol * 2 + 1) +
+                (gbz + N_ghost_zcol) * (N_ghost_ycol * N_ghost_xcol * 4 + 1);
+            // printf("Read: %d at: %d %d %d\n", index, gbx, gby, gbz);
+            struct reb_vec6d gb =
+                // gbcache[gbx + N_ghost_xcol][gby + N_ghost_ycol]
+                //        [gbz + N_ghost_zcol];
+                gbcache[index];
                             struct reb_vec6d gbunmod = gb;
                             gb.x += p1.x;
                             gb.y += p1.y;
@@ -364,6 +400,7 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
             free(local_collisions);
             free(local_counts);
             free(local_capacities);
+            free(gbcache);
         }
         break;
         case REB_COLLISION_LINETREE:
