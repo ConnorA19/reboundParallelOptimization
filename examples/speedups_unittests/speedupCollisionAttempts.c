@@ -589,12 +589,42 @@ static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const 
         double rp  = p1_r + second_largest_radius + 0.86602540378443*c->w;
         // Check if we need to decent into daughter cells
         if (r2 < rp*rp ){
-            for (int o=0;o<8;o++){
+            struct ChildNode {
+            struct reb_treecell* cell;
+            double dist_sq;
+            };
+        
+            struct ChildNode nodes_to_visit[8];
+            int count = 0;
+
+            // 2. Gather valid children and calculate distances
+            for (int o = 0; o < 8; o++) {
                 struct reb_treecell* d = c->oct[o];
-                if (d!=NULL){
-                    reb_tree_get_nearest_neighbour_in_cell(r, gb,gbunmod,ri,p1_r,second_largest_radius,collision_nearest,d);
+                if (d != NULL) {
+                // We access d->x/y/z here. This pulls 'd' into cache. 
+                // Since we are likely to visit it soon, this is acceptable.
+                    double cdx = gb.x - d->x;
+                    double cdy = gb.y - d->y;
+                    double cdz = gb.z - d->z;
+                    
+                    nodes_to_visit[count].cell = d;
+                    nodes_to_visit[count].dist_sq = cdx*cdx + cdy*cdy + cdz*cdz;
+                    count++;
                 }
             }
+            for (int i = 1; i < count; i++) {
+            struct ChildNode key = nodes_to_visit[i];
+            int j = i - 1;
+            while (j >= 0 && nodes_to_visit[j].dist_sq > key.dist_sq) {
+                nodes_to_visit[j + 1] = nodes_to_visit[j];
+                j = j - 1;
+            }
+            nodes_to_visit[j + 1] = key;
+            }
+            for (int i = 0; i < count; i++) {
+            reb_tree_get_nearest_neighbour_in_cell(r, gb, gbunmod, ri, p1_r, second_largest_radius, collision_nearest, nodes_to_visit[i].cell);
+            }
+            
         }
     }
 }
