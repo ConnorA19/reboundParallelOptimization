@@ -48,7 +48,7 @@
 #ifndef OPENMP //Serial Version
 static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r,  double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c);
 #else //Parallel Version
-static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c, struct reb_collision** local_collisions, int* local_counts, int* local_capacities);
+static void reb_tree_get_nearest_neighbour_in_cell_tasks(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c, struct reb_collision** local_collisions, int* local_counts, int* local_capacities, int depth);
 #endif //OPENMP
 static void reb_tree_check_for_overlapping_trajectories_in_cell(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double p1_r_plus_dtv, struct reb_collision* collision_nearest, struct reb_treecell* c, double maxdrift);
 
@@ -279,54 +279,71 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
             struct reb_collision** local_collisions = calloc(nthreads, sizeof(struct reb_collision*));
             int* local_counts = calloc(nthreads, sizeof(int));
             int* local_capacities = calloc(nthreads, sizeof(int));
+
+            for (int t=0; t<nthreads; t++){
+                local_capacities[t] = 32;
+                local_collisions[t] = malloc(local_capacities[t] * sizeof(struct reb_collision));
+            }
 #endif //OPENMP
 
             //---------------------------------------------TIME HERE---------------------------
             double t0 = omp_get_wtime();
             // Loop over all particles
-            #pragma omp parallel for schedule(guided)
-            for (int i=0;i<N;i++){
-                #ifndef OPENMP
-                if (reb_sigint > 1) return;
-                #endif // OPENMP
-                struct reb_particle p1 = particles[i];
-                struct reb_collision collision_nearest;
-                collision_nearest.p1 = i;
-                collision_nearest.p2 = -1;
-                double p1_r = p1.r;
-                // Loop over ghost boxes.
-                for (int gbx=-N_ghost_xcol; gbx<=N_ghost_xcol; gbx++){
-                    for (int gby=-N_ghost_ycol; gby<=N_ghost_ycol; gby++){
-                        for (int gbz=-N_ghost_zcol; gbz<=N_ghost_zcol; gbz++){
-                            // Calculated shifted position (for speedup).
-                            struct reb_vec6d gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
-                            struct reb_vec6d gbunmod = gb;
-                            gb.x += p1.x;
-                            gb.y += p1.y;
-                            gb.z += p1.z;
-                            gb.vx += p1.vx;
-                            gb.vy += p1.vy;
-                            gb.vz += p1.vz;
-                            // Loop over all root boxes.
-                            for (int ri=0;ri<r->N_root;ri++){
-                                struct reb_treecell* rootcell = r->tree_root[ri];
-                                if (rootcell!=NULL){
+            #pragma omp parallel
+            {
+                #pragma omp single 
+                {
+                    for (int i=0;i<N;i++){
+                        #pragma omp task firstprivate(i) \
+                        shared(r, particles, N_ghost_xcol, N_ghost_ycol, N_ghost_zcol, \
+                        second_largest_radius, local_collisions, local_counts, local_capacities)
+                        {
+                            #ifndef OPENMP
+                            if (reb_sigint > 1) return;
+                            #endif // OPENMP
+                            struct reb_particle p1 = particles[i];
+                            struct reb_collision collision_nearest;
+                            collision_nearest.p1 = i;
+                            collision_nearest.p2 = -1;
+                            double p1_r = p1.r;
+                            // Loop over ghost boxes.
+                            for (int gbx=-N_ghost_xcol; gbx<=N_ghost_xcol; gbx++){
+                                for (int gby=-N_ghost_ycol; gby<=N_ghost_ycol; gby++){
+                                    for (int gbz=-N_ghost_zcol; gbz<=N_ghost_zcol; gbz++){
+                                        // Calculated shifted position (for speedup).
+                                        struct reb_vec6d gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
+                                        struct reb_vec6d gbunmod = gb;
+                                        gb.x += p1.x;
+                                        gb.y += p1.y;
+                                        gb.z += p1.z;
+                                        gb.vx += p1.vx;
+                                        gb.vy += p1.vy;
+                                        gb.vz += p1.vz;
+                                        // Loop over all root boxes.
+                                        for (int ri=0;ri<r->N_root;ri++){
+                                            struct reb_treecell* rootcell = r->tree_root[ri];
+                                            if (rootcell!=NULL){
 #ifdef OPENMP
-                                    reb_tree_get_nearest_neighbour_in_cell_omp(r, gb, gbunmod, ri, p1_r, second_largest_radius, &collision_nearest, rootcell, local_collisions, local_counts, local_capacities);
+                                                reb_tree_get_nearest_neighbour_in_cell_tasks(r, gb, gbunmod, ri, p1_r, second_largest_radius, &collision_nearest, rootcell, local_collisions, local_counts, local_capacities, 0);
 #else //NOT OPENMP
-                                    reb_tree_get_nearest_neighbour_in_cell(r, gb, gbunmod, ri, p1_r, second_largest_radius, &collision_nearest, rootcell);
+                                                reb_tree_get_nearest_neighbour_in_cell(r, gb, gbunmod, ri, p1_r, second_largest_radius, &collision_nearest, rootcell);
 #endif // OPENMP
 
 
 
+                                            }
+                                        }
+                                    }
                                 }
-                            }
+                            } 
                         }
+                        
+                        // Continue if no collision was found
+                        //if (collision_nearest.p2==-1) continue;
                     }
                 }
-                // Continue if no collision was found
-                if (collision_nearest.p2==-1) continue;
             }
+            
             double t1 = omp_get_wtime();
             total_time = t1 - t0;
             int total = 0;
@@ -639,22 +656,14 @@ static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const 
 }
 #endif
 
-#ifdef OPENMP //Parallel Version
-/**
- * @brief Find the nearest neighbour in a cell or its daughters.
- * @details The function only returns a positive result if the particles
- * are overlapping. Thus, the name nearest neighbour is not
- * exactly true. With openMP speedups.
- * @param r REBOUND simulation to work on.
- * @param gb (Shifted) position and velocity of the particle.
- * @param ri Index of the root box currently being searched in.
- * @param p1_r Radius of the particle (this is not in gb).
- * @param second_largest_radius The radius of the second largest particles.
- * @param collision_nearest Pointer to the nearest collision found so far.
- * @param c Pointer to the cell currently being searched in.
- * @param gbunmod Ghostbox unmodified
- */
-static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c, struct reb_collision** local_collisions, int* local_counts, int* local_capacities){
+#ifdef OPENMP
+static void reb_tree_get_nearest_neighbour_in_cell_tasks(
+    struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod,
+    int ri, double p1_r, double second_largest_radius,
+    struct reb_collision* collision_nearest, struct reb_treecell* c,
+    struct reb_collision** local_collisions, int* local_counts, int* local_capacities,
+    int depth)
+{
     const struct reb_particle* const particles = r->particles;
     if (c->pt>=0){
         // c is a leaf node
@@ -717,19 +726,43 @@ static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* co
             local_collisions[tid][local_counts[tid]] = *collision_nearest;
             local_counts[tid]++;
         }
-    }else{
-        // c is not a leaf node
+    }else {
         double dx = gb.x - c->x;
         double dy = gb.y - c->y;
         double dz = gb.z - c->z;
         double r2 = dx*dx + dy*dy + dz*dz;
-        double rp  = p1_r + second_largest_radius + 0.86602540378443*c->w;
-        // Check if we need to decent into daughter cells
-        if (r2 < rp*rp ){
-            for (int o=0;o<8;o++){
-                struct reb_treecell* d = c->oct[o];
-                if (d!=NULL){
-                    reb_tree_get_nearest_neighbour_in_cell_omp(r, gb,gbunmod,ri,p1_r,second_largest_radius,collision_nearest,d, local_collisions, local_counts, local_capacities);
+        double rp = p1_r + second_largest_radius + 0.86602540378443*c->w;
+        
+        if (r2 < rp*rp) {
+            // Create tasks for first tree level (could have more levels but likely not needed)
+            if (depth < 1) {
+                for (int o=0; o<8; o++){
+                    struct reb_treecell* d = c->oct[o];
+                    if (d!=NULL){
+                        #pragma omp task \
+                            firstprivate(gb, gbunmod, ri, p1_r, second_largest_radius, depth, d) \
+                            shared(r, collision_nearest, local_collisions, local_counts, local_capacities)
+                        {
+                            reb_tree_get_nearest_neighbour_in_cell_tasks(
+                                r, gb, gbunmod, ri, p1_r, second_largest_radius,
+                                collision_nearest, d, local_collisions,
+                                local_counts, local_capacities, depth+1
+                            );
+                        }
+                    }
+                }
+                #pragma omp taskwait // wait for tasks
+            } else {
+                // Complete as usual
+                for (int o=0; o<8; o++){
+                    struct reb_treecell* d = c->oct[o];
+                    if (d!=NULL){
+                        reb_tree_get_nearest_neighbour_in_cell_tasks(
+                            r, gb, gbunmod, ri, p1_r, second_largest_radius,
+                            collision_nearest, d, local_collisions,
+                            local_counts, local_capacities, depth+1
+                        );
+                    }
                 }
             }
         }
