@@ -378,9 +378,9 @@ void time_CollisionSearchSpeedupCompare(){
         total_time2 += speedup_reb_collision_search(r);
         reb_simulation_free(r);
     }
-    printf("\nTotal Time Original: %f\n", total_time1);
-    printf("Total Time Speedup: %f\n", total_time2);
-    printf("Relative Time %f\n", (total_time2/total_time1));
+    // printf("\nTotal Time Original: %f\n", total_time1);
+    // printf("Total Time Speedup: %f\n", total_time2);
+    // printf("Relative Time %f\n", (total_time2/total_time1));
 }
 
 typedef struct timeResults{
@@ -405,9 +405,9 @@ void time_CollisionSearchCompareRandom(int particleCount, double boxSize, int gh
         reb_simulation_free(r1);
         reb_simulation_free(r2);
     }
-    printf("\nTotal Time Original: %f\n", total_time1);
-    printf("Total Time Speedup: %f\n", total_time2);
-    printf("Relative Time %f\n", (total_time2/total_time1));
+    // printf("\nTotal Time Original: %f\n", total_time1);
+    // printf("Total Time Speedup: %f\n", total_time2);
+    // printf("Relative Time %f\n", (total_time2/total_time1));
 
     timeResults->timeOrig += total_time1;
     timeResults->timeNew += total_time2;
