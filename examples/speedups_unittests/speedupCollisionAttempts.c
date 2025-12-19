@@ -342,8 +342,6 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
                 // Continue if no collision was found
                 if (collision_nearest.p2==-1) continue;
             }
-            double t1 = omp_get_wtime();
-            total_time = t1 - t0;
             int total = 0;
             for (int t=0; t<nthreads; t++){
                 total += local_counts[t];
@@ -364,6 +362,8 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
             free(local_collisions);
             free(local_counts);
             free(local_capacities);
+            double t1 = omp_get_wtime();
+            total_time = t1 - t0;
         }
         break;
         case REB_COLLISION_LINETREE:
