@@ -233,7 +233,8 @@ void reb_simulation_warning(struct reb_simulation* const r, const char* const ms
 }
 
 void reb_simulation_error(struct reb_simulation* const r, const char* const msg){
-    reb_message(r, 'e', msg);
+    return;
+    //reb_message(r, 'e', msg);
 }
 
 void reb_simulation_stop(struct reb_simulation* const r){
