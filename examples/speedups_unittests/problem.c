@@ -433,18 +433,18 @@ int main(int argc, char* argv[]){
     int ghosty[] = {0,1,2,5,10};
     int ghostz[] = {0,1,2,5,10};
 
-    // printf("Running 3125 Test for \nNumber of Particles: 0,1,10,100,1000\nBoxSize: 0.0, 1.0, 10.0, 100.0, 1000.0\nghost x, z, and y: 0,1,2,5,10\n");
-    // for (int a = 0; a < 5; a++){
-    //     for (int b = 0; b < 5; b++){
-    //         for (int c = 0; c < 5; c++){
-    //             for (int d = 0; d < 5; d++){
-    //                 for (int e = 0; e < 5; e++){
-    //                     test_CollisionSearchCompareRandom(numParticles[a], boxSize[b], ghostx[c], ghosty[d], ghostz[e]);
-    //                 }
-    //             }
-    //         }
-    //     }
-    // }
+    printf("Running 3125 Test for \nNumber of Particles: 0,1,10,100,1000\nBoxSize: 0.0, 1.0, 10.0, 100.0, 1000.0\nghost x, z, and y: 0,1,2,5,10\n");
+    for (int a = 0; a < 5; a++){
+        for (int b = 0; b < 5; b++){
+            for (int c = 0; c < 5; c++){
+                for (int d = 0; d < 5; d++){
+                    for (int e = 0; e < 5; e++){
+                        test_CollisionSearchCompareRandom(numParticles[a], boxSize[b], ghostx[c], ghosty[d], ghostz[e]);
+                    }
+                }
+            }
+        }
+    }
     // test_CollisionSearchCompareRandom(100, 100.0, 2, 2, 0);
 
     // test_CollisionSearchCompare(1000);
