@@ -16,6 +16,20 @@
 [![REBOUND (python)](https://github.com/hannorein/rebound/actions/workflows/python.yml/badge.svg)](https://github.com/hannorein/rebound/actions/workflows/python.yml)
     
 
+# !! For 5451 Grading !!:
+Hello, this project is built on top of another one with an already impressive README. The best solution to this problem seemed to be to add this little blurb at the beginning. 
+
+The tests are to be run on the cselab plate machines. In order to run the test for the simulation run
+```
+    cd examples
+    cd speedups_unittests
+    make test OPENMP=1
+```
+
+speedups_unittests is also where our changed files are located. All of the base code is in mockCollision.c and our new code is in speedupCollisionAttempts.c
+
+We took an iterative approach to this assignment where our last iteration has been pushed to main. If one would like to run any of our other iterative steps by themselves they could swap to that corresponding branch and run git pull origin (remote-branch-name)
+
 # Welcome to REBOUND
 
 ![REBOUND Examples](https://github.com/hannorein/rebound/raw/main/docs/img/reboundbanner.png)
