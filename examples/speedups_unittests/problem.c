@@ -128,7 +128,7 @@ struct reb_simulation* mockBouncingBallsSimulation(){
 }
 
 
-struct reb_simulation* mockRandomShearingSheetSimulation(int collisionDetectionType, int numParticles, struct reb_particle* particleList){
+struct reb_simulation* mockRandomShearingSheetSimulation(int collisionDetectionType, int numParticles, struct reb_particle* particleList, double boxsizeIn, int ghostx, int ghosty, int ghostz){
     particleList = malloc(sizeof(struct reb_particle) * numParticles);
     struct reb_simulation* r = reb_simulation_create();
     // Setup constants
@@ -152,7 +152,7 @@ struct reb_simulation* mockRandomShearingSheetSimulation(int collisionDetectionT
     double particle_radius_min     = 1;       // m
     double particle_radius_max     = 4;       // m
     double particle_radius_slope   = -3;
-    double boxsize             = 100;         // m
+    double boxsize             = boxsizeIn;         // m
     reb_simulation_configure_box(r, boxsize, 2, 2, 1);
     r->N_ghost_x = 2;
     r->N_ghost_y = 2;
@@ -283,7 +283,7 @@ int main(int argc, char* argv[]){
 
 
     struct reb_particle* particleList;
-    struct reb_simulation* r = mockRandomShearingSheetSimulation(REB_COLLISION_TREE, 10, particleList);
+    struct reb_simulation* r = mockRandomShearingSheetSimulation(REB_COLLISION_TREE, 10, particleList, 100.0, 2,2,0);
     //TIME
     // time_CollisionSearchSpeedup();
     time_CollisionSearchSpeedupCompare();
