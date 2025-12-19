@@ -48,7 +48,7 @@
 #ifndef OPENMP //Serial Version
 static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r,  double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c);
 #else //Parallel Version
-static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c, struct reb_collision** local_collisions, int* local_counts, int* local_capacities);
+static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c, struct reb_collision** local_collisions, int* local_counts, int* local_capacities, int tid);
 #endif //OPENMP
 static void reb_tree_check_for_overlapping_trajectories_in_cell(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double p1_r_plus_dtv, struct reb_collision* collision_nearest, struct reb_treecell* c, double maxdrift);
 
@@ -279,40 +279,13 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
             struct reb_collision** local_collisions = calloc(nthreads, sizeof(struct reb_collision*));
             int* local_counts = calloc(nthreads, sizeof(int));
             int* local_capacities = calloc(nthreads, sizeof(int));
+
 #endif //OPENMP
 
             //---------------------------------------------TIME HERE---------------------------
             double t0 = omp_get_wtime();
             // Loop over all particles
-    // printf("N: %d, xcol: %d, ycol: %d, zcol: %d \n", N, N_ghost_xcol,
-    //        N_ghost_ycol, N_ghost_zcol);
-    // struct reb_vec6d gbcache[N_ghost_xcol * N_ghost_ycol * N_ghost_zcol];
-    int elements =
-        (2 * N_ghost_xcol + 1) * (2 * N_ghost_ycol + 1) * (2 * N_ghost_zcol + 1);
-    struct reb_vec6d *gbcache = calloc(elements, sizeof(struct reb_vec6d));
-    // malloc(sizeof(struct reb_vec6d) * 2 * N_ghost_xcol * 2 * N_ghost_ycol *
-    //            2 * N_ghost_zcol * 2 +
-    //        3);
-    if (gbcache == NULL) {
-      return 0;
-    }
-    // printf("xyz: %d %d %d elem: %d\n", N_ghost_xcol, N_ghost_ycol,
-    // N_ghost_zcol,
-    //        elements);
-    for (int gbx = 0; gbx <= 2 * N_ghost_xcol; gbx++) {
-      for (int gby = 0; gby <= 2 * N_ghost_ycol; gby++) {
-        for (int gbz = 0; gbz <= 2 * N_ghost_zcol; gbz++) {
-          // gbcache[gbx][gby][gbz] =
-          int index = gbx + gby * (N_ghost_xcol * 2 + 1) +
-                      gbz * (N_ghost_xcol * N_ghost_ycol * 4 + 1);
-          // printf("Wrote: %d at: %d %d %d\n", index, gbx, gby, gbz);
-          gbcache[index] = reb_boundary_get_ghostbox(
-              r, gbx - N_ghost_xcol, gby - N_ghost_ycol, gbz - N_ghost_zcol);
-        }
-      }
-    }
-            // Loop over all particles
-            #pragma omp parallel for schedule(guided) shared(gbcache)
+            #pragma omp parallel for schedule(guided)
             for (int i=0;i<N;i++){
                 #ifndef OPENMP
                 if (reb_sigint > 1) return;
@@ -337,20 +310,14 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
 
                 int gbz_min = (p1.z < furthest_collision_distance) ? -N_ghost_zcol : 0;
                 int gbz_max = (p1.z > boxsize_z - furthest_collision_distance) ? N_ghost_zcol : 0;
+
+                int tid = omp_get_thread_num();
                 // Loop over ghost boxes.
                 for (int gbx=gbx_min; gbx<=gbx_max; gbx++){
                     for (int gby=gby_min; gby<=gby_max; gby++){
                         for (int gbz=gbz_min; gbz<=gbz_max; gbz++){
                             // Calculated shifted position (for speedup).
-                            int index =
-                (gbx + N_ghost_xcol) +
-                (gby + N_ghost_ycol) * (N_ghost_xcol * 2 + 1) +
-                (gbz + N_ghost_zcol) * (N_ghost_ycol * N_ghost_xcol * 4 + 1);
-            // printf("Read: %d at: %d %d %d\n", index, gbx, gby, gbz);
-            struct reb_vec6d gb =
-                // gbcache[gbx + N_ghost_xcol][gby + N_ghost_ycol]
-                //        [gbz + N_ghost_zcol];
-                gbcache[index];
+                            struct reb_vec6d gb = reb_boundary_get_ghostbox(r, gbx,gby,gbz);
                             struct reb_vec6d gbunmod = gb;
                             gb.x += p1.x;
                             gb.y += p1.y;
@@ -363,7 +330,7 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
                                 struct reb_treecell* rootcell = r->tree_root[ri];
                                 if (rootcell!=NULL){
 #ifdef OPENMP
-                                    reb_tree_get_nearest_neighbour_in_cell_omp(r, gb, gbunmod, ri, p1_r, second_largest_radius, &collision_nearest, rootcell, local_collisions, local_counts, local_capacities);
+                                    reb_tree_get_nearest_neighbour_in_cell_omp(r, gb, gbunmod, ri, p1_r, second_largest_radius, &collision_nearest, rootcell, local_collisions, local_counts, local_capacities, tid);
 #else //NOT OPENMP
                                     reb_tree_get_nearest_neighbour_in_cell(r, gb, gbunmod, ri, p1_r, second_largest_radius, &collision_nearest, rootcell);
 #endif // OPENMP
@@ -400,7 +367,6 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
             free(local_collisions);
             free(local_counts);
             free(local_capacities);
-            free(gbcache);
         }
         break;
         case REB_COLLISION_LINETREE:
@@ -706,7 +672,7 @@ static void reb_tree_get_nearest_neighbour_in_cell(struct reb_simulation* const 
  * @param c Pointer to the cell currently being searched in.
  * @param gbunmod Ghostbox unmodified
  */
-static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c, struct reb_collision** local_collisions, int* local_counts, int* local_capacities){
+static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* const r, struct reb_vec6d gb, struct reb_vec6d gbunmod, int ri, double p1_r, double second_largest_radius, struct reb_collision* collision_nearest, struct reb_treecell* c, struct reb_collision** local_collisions, int* local_counts, int* local_capacities, int tid){
     const struct reb_particle* const particles = r->particles;
     if (c->pt>=0){
         // c is a leaf node
@@ -758,7 +724,6 @@ static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* co
             collision_nearest->p2 = c->pt;
             collision_nearest->gb = gbunmod;
             // Save collision in collisions array.
-            int tid = omp_get_thread_num();
             if (local_counts[tid] == local_capacities[tid]){
                 local_capacities[tid] = local_capacities[tid] ? local_capacities[tid] * 2 : 32;
                 local_collisions[tid] = realloc(
@@ -781,7 +746,7 @@ static void reb_tree_get_nearest_neighbour_in_cell_omp(struct reb_simulation* co
             for (int o=0;o<8;o++){
                 struct reb_treecell* d = c->oct[o];
                 if (d!=NULL){
-                    reb_tree_get_nearest_neighbour_in_cell_omp(r, gb,gbunmod,ri,p1_r,second_largest_radius,collision_nearest,d, local_collisions, local_counts, local_capacities);
+                    reb_tree_get_nearest_neighbour_in_cell_omp(r, gb,gbunmod,ri,p1_r,second_largest_radius,collision_nearest,d, local_collisions, local_counts, local_capacities, tid);
                 }
             }
         }
