@@ -23,7 +23,7 @@ The tests are to be run on the cselab plate machines. In order to run the test f
 ```
     cd examples
     cd speedups_unittests
-    make test
+    make test OPENMP=1
 ```
 
 speedups_unittests is also where our changed files are located. All of the base code is in mockCollision.c and our new code is in speedupCollisionAttempts.c
