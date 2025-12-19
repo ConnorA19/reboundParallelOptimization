@@ -460,7 +460,7 @@ int main(int argc, char* argv[]){
     int ghostx2[] = {1,2};
     int ghosty2[] = {1,2};
     int ghostz2[] = {1,2};
-    int iterations = 50;
+    int iterations = 10;
     for (int a = 0; a < 2; a++){
         for (int b = 0; b < 2; b++){
             for (int c = 0; c < 2; c++){
