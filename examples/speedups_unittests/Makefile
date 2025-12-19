@@ -36,6 +36,15 @@ test: problem.c mockCollision.c librebound
 	echo " "
 	echo "8 Threads"
 	OMP_NUM_THREADS=8 ./rebound
+	echo "16 Thread"
+	OMP_NUM_THREADS=1 ./rebound
+	echo " "
+	echo "32 Threads"
+	OMP_NUM_THREADS=2 ./rebound
+	echo " "
+	echo "64 Threads"
+	OMP_NUM_THREADS=4 ./rebound
+
 
 librebound:
 	@echo "Compiling shared library $(LIBREBOUND) ..."
