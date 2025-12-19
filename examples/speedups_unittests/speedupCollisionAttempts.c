@@ -274,6 +274,8 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
                 second_largest_radius = r->particles[l2].r;
             }
 
+            //---------------------------------------------TIME HERE---------------------------
+            double t0 = omp_get_wtime();
 #ifdef OPENMP
             int nthreads = omp_get_max_threads();
             struct reb_collision** local_collisions = calloc(nthreads, sizeof(struct reb_collision*));
@@ -281,11 +283,9 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
             int* local_capacities = calloc(nthreads, sizeof(int));
 #endif //OPENMP
 
-            //---------------------------------------------TIME HERE---------------------------
-            double t0 = omp_get_wtime();
-
-    int elements =
-        (N_ghost_xcol + 1) * (N_ghost_ycol + 1) * (N_ghost_zcol + 1) * 4;
+    int elements = 27;
+    // int elements =
+    //     (N_ghost_xcol + 1) * (N_ghost_ycol + 1) * (N_ghost_zcol + 1) * 4;
     struct reb_vec6d *gbcache = malloc(elements * sizeof(struct reb_vec6d));
     if (gbcache == NULL) {
       return 0;
@@ -299,8 +299,8 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
       for (int gby = 0; gby <= 2 * N_ghost_ycol; gby++) {
         for (int gbz = 0; gbz <= 2 * N_ghost_zcol; gbz++) {
           // gbcache[gbx][gby][gbz] =
-          int index = gbx + gby * (N_ghost_xcol * 2 + 1) +
-                      gbz * ((N_ghost_xcol * 2 + 1) * N_ghost_ycol * 2 + 1);
+          int index = gbx + gby * (3) +
+                      gbz * 9;
           // printf("Wrote: %d at: %d %d %d\n", index, gbx, gby, gbz);
           gbcache[index] = reb_boundary_get_ghostbox(
               r, gbx - N_ghost_xcol, gby - N_ghost_ycol, gbz - N_ghost_zcol);
@@ -325,6 +325,8 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
                 collision_nearest.p2 = -1;
       struct reb_vec6d *igbcache = malloc(elements * sizeof(struct reb_vec6d));
       for (size_t j = 0; j < elements; j++) {
+// if (!loaded[index])
+//           continue;
         igbcache[j] = gbcache[j];
         igbcache[j].x += p1.x;
         igbcache[j].y += p1.y;
@@ -335,9 +337,9 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
       }
 
                 double p1_r = p1.r;
-      for (int index = 0; index < 9; index++) {
-        // if (!loaded[index])
-        //   continue;
+      for (int index = 0; index < elements; index++) {
+        if (!loaded[index])
+          continue;
 
         struct reb_vec6d gb = igbcache[index];
         struct reb_vec6d gbunmod = cgbcache[index];
@@ -388,8 +390,6 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
                 free(igbcache);
                 if (collision_nearest.p2==-1) continue;
             }
-            double t1 = omp_get_wtime();
-            total_time = t1 - t0;
             int total = 0;
             for (int t=0; t<nthreads; t++){
                 total += local_counts[t];
@@ -406,6 +406,8 @@ double speedup_reb_collision_search(struct reb_simulation* const r){
                 offset += local_counts[t];
                 free(local_collisions[t]);
             }
+            double t1 = omp_get_wtime();
+            total_time = t1 - t0;
             r->collisions_N = total;
             free(local_collisions);
             free(local_counts);
