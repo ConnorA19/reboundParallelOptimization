@@ -2,7 +2,7 @@
  * @file 	particle.c
  * @brief 	reb_particle structure and main particle routines.
  * @author 	Hanno Rein <hanno@hanno-rein.de>
- * 
+ *
  * @section 	LICENSE
  * Copyright (c) 2011 Hanno Rein, Shangfei Liu
  *
@@ -43,17 +43,17 @@
 #endif // MPI
 
 #ifdef GRAVITY_GRAPE
-#warning Fix this. 
+#warning Fix this.
 extern double gravity_minimum_mass;
 #endif // GRAVITY_GRAPE
 
 static void reb_simulation_add_local(struct reb_simulation* const r, struct reb_particle pt){
     if (reb_boundary_particle_is_in_box(r, pt)==0){
-        if (r->boxsize.x==0 && r->boxsize.y==0 && r->boxsize.z==0){ 
+        if (r->boxsize.x==0 && r->boxsize.y==0 && r->boxsize.z==0){
             reb_simulation_error(r,"Cannot add particle because simulation box not initialized. Call reb_simulation_configure_box() before adding particles.");
         }else{
             // reb_particle has left the box. Do not add.
-            reb_simulation_error(r,"Particle outside of box boundaries. Did not add particle.");
+            //reb_simulation_error(r,"Particle outside of box boundaries. Did not add particle.");
         }
         return;
     }
@@ -97,9 +97,9 @@ static void reb_simulation_add_local(struct reb_simulation* const r, struct reb_
             }
             rim->encounter_map[rim->encounter_N] = r->N-1;
             rim->encounter_N++;
-            if (r->N_active==-1){ 
+            if (r->N_active==-1){
                 // If global N_active is not set, then all particles are active, so the new one as well.
-                // Otherwise, assume we're adding non active particle. 
+                // Otherwise, assume we're adding non active particle.
                 rim->encounter_N_active++;
             }
         }
@@ -121,7 +121,7 @@ static void reb_simulation_add_local(struct reb_simulation* const r, struct reb_
 
             // First reshuffle existing Ks
             for (int i = old_N-1; i >= 0; i--){
-                for (int j = old_N-1; j >= 0; j--){ 
+                for (int j = old_N-1; j >= 0; j--){
                     ri_trace->current_Ks[i*old_N+j+i] = ri_trace->current_Ks[i*old_N+j];
                 }
             }
@@ -135,9 +135,9 @@ static void reb_simulation_add_local(struct reb_simulation* const r, struct reb_
             ri_trace->encounter_map[ri_trace->encounter_N] = old_N;
             ri_trace->encounter_N++;
 
-            if (r->N_active==-1){ 
+            if (r->N_active==-1){
                 // If global N_active is not set, then all particles are active, so the new one as well.
-                // Otherwise, assume we're adding non active particle. 
+                // Otherwise, assume we're adding non active particle.
                 ri_trace->encounter_N_active++;
             }
 
@@ -157,7 +157,7 @@ void reb_simulation_add(struct reb_simulation* const r, struct reb_particle pt){
     int proc_id = rootbox/N_root_per_node;
     const unsigned int N_active = (r->N_active==-1)?r->N: (unsigned int)r->N_active;
     if (proc_id != r->mpi_id && r->N >= N_active){
-        // Add particle to array and send them to proc_id later. 
+        // Add particle to array and send them to proc_id later.
         reb_communication_mpi_add_particle_to_send_queue(r,pt,proc_id);
         return;
     }
@@ -289,7 +289,7 @@ int reb_simulation_particle_index(struct reb_particle* p){
         i++;
         if(i>=N){
             return -1;	// p not in simulation.  Shouldn't happen unless you mess with p.sim after creating the particle
-        }	
+        }
     }
     return i;
 }
@@ -325,7 +325,7 @@ static struct reb_particle* reb_search_lookup_table(struct reb_simulation* const
 }
 
 static int compare_hash(const void* a, const void* b){
-    struct reb_hash_pointer_pair* ia = (struct reb_hash_pointer_pair*)a; 
+    struct reb_hash_pointer_pair* ia = (struct reb_hash_pointer_pair*)a;
     struct reb_hash_pointer_pair* ib = (struct reb_hash_pointer_pair*)b;
     return (ia->hash > ib->hash) - (ia->hash < ib->hash); // to avoid overflow possibilities
 }
@@ -350,7 +350,7 @@ static void reb_update_particle_lookup_table(struct reb_simulation* const r){
                 r->particle_lookup_table[zerohash].index = i;
             }
         }
-        else{                   
+        else{
             r->particle_lookup_table[N_hash].hash = particles[i].hash;
             r->particle_lookup_table[N_hash].index = i;
             N_hash++;
@@ -361,7 +361,7 @@ static void reb_update_particle_lookup_table(struct reb_simulation* const r){
 }
 
 struct reb_particle* reb_simulation_particle_by_hash(struct reb_simulation* const r, uint32_t hash){
-    struct reb_particle* p; 
+    struct reb_particle* p;
     p = reb_search_lookup_table(r, hash);
     if (p == NULL){
         reb_update_particle_lookup_table(r);
@@ -434,7 +434,7 @@ int reb_simulation_remove_particle(struct reb_simulation* const r, int index, in
             int encounter_index = -1;
             for (unsigned int i=0;i<rim->encounter_N;i++){
                 if (after_to_be_removed_particle == 1){
-                    rim->encounter_map[i-1] = rim->encounter_map[i] - 1; 
+                    rim->encounter_map[i-1] = rim->encounter_map[i] - 1;
                 }
                 if (rim->encounter_map[i]==index){
                     encounter_index = i;
