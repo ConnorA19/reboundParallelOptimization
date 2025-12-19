@@ -391,7 +391,7 @@ typedef struct timeResults{
 void time_CollisionSearchCompareRandom(int particleCount, double boxSize, int ghostx, int ghosty, int ghostz, int iterations, struct timeResults* timeResults){
     double total_time1 = 0.0;
     double total_time2 = 0.0;
-    printf("Testing with ParticleCount: %d, BoxSize: %f, ghostx: %d, ghostz: %d, ghostz: %d, iterations: %d\n", particleCount, boxSize, ghostx, ghosty, ghostz, iterations);
+    // printf("Testing with ParticleCount: %d, BoxSize: %f, ghostx: %d, ghostz: %d, ghostz: %d, iterations: %d\n", particleCount, boxSize, ghostx, ghosty, ghostz, iterations);
     for (int i = 0; i < iterations; i++){
         struct reb_simulation* r1Ptr = NULL;
         struct reb_simulation* r2Ptr = NULL;
@@ -405,9 +405,7 @@ void time_CollisionSearchCompareRandom(int particleCount, double boxSize, int gh
         reb_simulation_free(r1);
         reb_simulation_free(r2);
     }
-    printf("\nTotal Time Original: %f\n", total_time1);
-    printf("Total Time Speedup: %f\n", total_time2);
-    printf("Relative Time %f\n", (total_time2/total_time1));
+
 
     timeResults->timeOrig += total_time1;
     timeResults->timeNew += total_time2;
@@ -421,30 +419,30 @@ int main(int argc, char* argv[]){
     // mock_tree_collisions();
 
     //TEST
-    test_CollisionSearchCompare(-1);
-    test_CollisionSearchCompare(0);
-    test_CollisionSearchCompare(1);
-    test_CollisionSearchCompare(2);
-    test_CollisionSearchCompare(10);
-    test_CollisionSearchCompare(100);
-    int numParticles[] = {0,1, 10, 100, 1000, };
-    double boxSize[] = {0.0, 1.0, 10.0, 100.0, 1000.0};
-    int ghostx[] = {0,1,2,5,10};
-    int ghosty[] = {0,1,2,5,10};
-    int ghostz[] = {0,1,2,5,10};
+    // test_CollisionSearchCompare(-1);
+    // test_CollisionSearchCompare(0);
+    // test_CollisionSearchCompare(1);
+    // test_CollisionSearchCompare(2);
+    // test_CollisionSearchCompare(10);
+    // test_CollisionSearchCompare(100);
+    // int numParticles[] = {0,1, 10, 100, 1000, };
+    // double boxSize[] = {0.0, 1.0, 10.0, 100.0, 1000.0};
+    // int ghostx[] = {0,1,2,5,10};
+    // int ghosty[] = {0,1,2,5,10};
+    // int ghostz[] = {0,1,2,5,10};
 
-    printf("Running 3125 Test for \nNumber of Particles: 0,1,10,100,1000\nBoxSize: 0.0, 1.0, 10.0, 100.0, 1000.0\nghost x, z, and y: 0,1,2,5,10\n");
-    for (int a = 0; a < 5; a++){
-        for (int b = 0; b < 5; b++){
-            for (int c = 0; c < 5; c++){
-                for (int d = 0; d < 5; d++){
-                    for (int e = 0; e < 5; e++){
-                        test_CollisionSearchCompareRandom(numParticles[a], boxSize[b], ghostx[c], ghosty[d], ghostz[e]);
-                    }
-                }
-            }
-        }
-    }
+    // printf("Running 3125 Test for \nNumber of Particles: 0,1,10,100,1000\nBoxSize: 0.0, 1.0, 10.0, 100.0, 1000.0\nghost x, z, and y: 0,1,2,5,10\n");
+    // for (int a = 0; a < 5; a++){
+    //     for (int b = 0; b < 5; b++){
+    //         for (int c = 0; c < 5; c++){
+    //             for (int d = 0; d < 5; d++){
+    //                 for (int e = 0; e < 5; e++){
+    //                     test_CollisionSearchCompareRandom(numParticles[a], boxSize[b], ghostx[c], ghosty[d], ghostz[e]);
+    //                 }
+    //             }
+    //         }
+    //     }
+    // }
     // test_CollisionSearchCompareRandom(100, 100.0, 2, 2, 0);
 
     // test_CollisionSearchCompare(1000);
@@ -460,7 +458,7 @@ int main(int argc, char* argv[]){
     int ghostx2[] = {1,2};
     int ghosty2[] = {1,2};
     int ghostz2[] = {1,2};
-    int iterations = 100;
+    int iterations = 10;
     for (int a = 0; a < 2; a++){
         for (int b = 0; b < 2; b++){
             for (int c = 0; c < 2; c++){
