@@ -128,7 +128,7 @@ struct reb_simulation* mockBouncingBallsSimulation(){
 }
 
 
-struct reb_simulation* mockRandomShearingSheetSimulation(int collisionDetectionType, int numParticles, struct reb_particle* particleList, double boxsizeIn, int ghostx, int ghosty, int ghostz){
+struct reb_simulation* mockRandomShearingSheetSimulation(int collisionDetectionType, int numParticles, struct reb_particle* particleList, int setParticleList, double boxsizeIn, int ghostx, int ghosty, int ghostz){
     particleList = malloc(sizeof(struct reb_particle) * numParticles);
     struct reb_simulation* r = reb_simulation_create();
     // Setup constants
@@ -167,23 +167,30 @@ struct reb_simulation* mockRandomShearingSheetSimulation(int collisionDetectionT
 
 
     // Add all ring paricles
-    for(int i =0; i < numParticles; i++){
-        struct reb_particle pt;
-        pt.x         = reb_random_uniform(r, -r->boxsize.x/2.,r->boxsize.x/2.);
-        pt.y         = reb_random_uniform(r, -r->boxsize.y/2.,r->boxsize.y/2.);
-        pt.z         = reb_random_normal(r, 1.);                    // m
-        pt.vx         = 0;
-        pt.vy         = -1.5*pt.x*OMEGA;
-        pt.vz         = 0;
-        pt.ax         = 0;
-        pt.ay         = 0;
-        pt.az         = 0;
-        double radius     = reb_random_powerlaw(r, particle_radius_min,particle_radius_max,particle_radius_slope);
-        pt.r         = radius;                        // m
-        double        particle_mass = particle_density*4./3.*M_PI*radius*radius*radius;
-        pt.m         = particle_mass;     // kg
-        reb_simulation_add(r, pt);
-        particleList[i] = pt;
+    if (setParticleList){
+        for(int i =0; i < numParticles; i++){
+            struct reb_particle pt;
+            pt.x         = reb_random_uniform(r, -r->boxsize.x/2.,r->boxsize.x/2.);
+            pt.y         = reb_random_uniform(r, -r->boxsize.y/2.,r->boxsize.y/2.);
+            pt.z         = reb_random_normal(r, 1.);                    // m
+            pt.vx         = 0;
+            pt.vy         = -1.5*pt.x*OMEGA;
+            pt.vz         = 0;
+            pt.ax         = 0;
+            pt.ay         = 0;
+            pt.az         = 0;
+            double radius     = reb_random_powerlaw(r, particle_radius_min,particle_radius_max,particle_radius_slope);
+            pt.r         = radius;                        // m
+            double        particle_mass = particle_density*4./3.*M_PI*radius*radius*radius;
+            pt.m         = particle_mass;     // kg
+            reb_simulation_add(r, pt);
+            particleList[i] = pt;
+        }
+    }
+    else{
+        for(int i =0; i < numParticles; i++){
+            reb_simulation_add(r, particleList[i]);
+        }
     }
     return r;
 }
@@ -283,7 +290,7 @@ int main(int argc, char* argv[]){
 
 
     struct reb_particle* particleList;
-    struct reb_simulation* r = mockRandomShearingSheetSimulation(REB_COLLISION_TREE, 10, particleList, 100.0, 2,2,0);
+    struct reb_simulation* r = mockRandomShearingSheetSimulation(REB_COLLISION_TREE, 10, particleList, 0, 100.0, 2,2,0);
     //TIME
     // time_CollisionSearchSpeedup();
     time_CollisionSearchSpeedupCompare();
